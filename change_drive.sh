@@ -44,10 +44,10 @@ szs_change_drive__main() {
     return 1
   fi
 
-  new_drive=$1
-  curr_dir="$(pwd)"
+  local new_drive=$1
+  local curr_dir="$(pwd)"
   if grep -E "^/mnt/.+/" <<< "$curr_dir" >/dev/null; then
-    old_drive=$(grep -Po "^/mnt/\K[^/]+" <<< "$curr_dir")
+    local old_drive=$(grep -Po "^/mnt/\K[^/]+" <<< "$curr_dir")
     if [[ "$old_drive" == "$new_drive" ]]; then
       return 0
     else
