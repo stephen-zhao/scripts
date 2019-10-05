@@ -27,9 +27,12 @@ file_type_to_exe_map = {
 #   '/mnt/d/Program Files/IrfanView/i_view64.exe': 
 # }
 
-def debug(*args):
+def debug(*args) -> None:
   if DEBUG:
-    print(*args, file=sys.stderr)
+    print("[DBUG][file_open]", *args, file=sys.stderr)
+
+def error(*args) -> None:
+  print("[ERRO][file_open]", *args, file=sys.stderr)
 
 def re_fullmatch_i(pattern: str, string: str):
   return re.fullmatch(pattern, string, flags=re.IGNORECASE)
@@ -76,12 +79,19 @@ def main(argv: List[str]):
   arg_parser.add_argument('exec', type=str, help='executable to override the default', nargs='?', default=None)
 
   args = arg_parser.parse_args(argv[1:])
-  
+
   file_type = determine_file_type(args.file)
-  exe = determine_exe(file_type)
+  
+  if not args.exec:
+    exe = determine_exe(file_type)
+  else:
+    exe = args.exec
+
   if not exe:
+    error("Cannot find default exe for file type", file_type)
     arg_parser.print_usage()
     exit(1)
+
   debug('exe:', exe)
   debug('pwd:', os.getcwd())
   debug('file:', args.file)
