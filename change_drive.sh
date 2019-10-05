@@ -4,6 +4,11 @@
 #
 # change_drive.sh
 # Stephen Zhao
+#
+# This script mimicks the drive-switching behaviour of traditional Windows
+# terminals for WSL terminals.
+# It saves the working directory before switching drives so as to restore
+# the drive-specific working directory when switching back.
 
 ######### UTIL ################################################################
 
@@ -22,6 +27,9 @@ szs_change_drive__warning() {
 
 szs_change_drive__usage() {
   echo "usage: source change_drive.sh <drive_letter>"
+  echo ""
+  echo "  This script mimicks the drive-switching behaviour"
+  echo "  of traditional Windows terminals for WSL terminals."
 }
 
 szs_change_drive__hint() {
