@@ -4,7 +4,7 @@
 # App: dfregex_bulk_rename (rebrn)
 # Version: v0.1
 # Last modified: 2019-12-21
-# Description: Renames files by substituting a search pattern with a 
+# Description: Renames files by substituting a search pattern with a
 #      replacement pattern, with datetime formatting and regex support.
 
 import argparse
@@ -51,7 +51,7 @@ class DatetimeMatcher:
 
     def supported_format_codes(self) -> List[str]:
         return self.__class__.format_code_to_re.keys()
-        
+
     def get_regex_from_format_code(self, format_code) -> List[str]:
         return self.__class__.format_code_to_re[format_code]
 
@@ -78,11 +78,11 @@ class DatetimeMatcher:
                 else:
                     yield dfregex[i]
                     i += 1
-    
+
     # Extracts the regex string from the datetime format augmented regex
     def get_regex(self, dfregex: str) -> Tuple[Dict[str, int], str]:
         return ''.join(self._get_regex_parts(dfregex))
-    
+
     def get_format_codes_and_group_indices(self, dfregex: str) -> Tuple[List[str], List[int]]:
         codes = []
         indices = []
@@ -116,7 +116,7 @@ class DatetimeMatcher:
         except ValueError:
             return None
         return parsed_datetime
-    
+
     def sub(self, search_dfregex: str, replacement_dfregex: str, text: str) -> str:
         search_regex = self.get_regex(search_dfregex)
         (codes, indices) = self.get_format_codes_and_group_indices(search_dfregex)
@@ -134,9 +134,11 @@ class DatetimeMatcher:
         except ValueError:
             return text
         return parsed_datetime.strftime(subbed_text_with_datetime_format)
-        
+
 
 # Prints a neat table
+# shamelessly copied, courtesy of u/ParalysedBeaver, from:
+# https://www.reddit.com/r/inventwithpython/comments/455qgj/automate_the_boring_stuff_chapter_6_table_printer/d3f5l3e/
 def printTable(inputList: List[str]) -> None:
     # initialize the list "colWidths" with zeroes equal to the length of the input list
     colWidths = [0] * len(inputList)
@@ -156,58 +158,62 @@ def printTable(inputList: List[str]) -> None:
             print(inputList[y][x].rjust(colWidths[y]), end = ' ')
         print('')
 
+def parse_args(args: List[str]) -> any:
+    argparser = argparse.ArgumentParser(
+        description="Renames files by substituting a search pattern with a replacement \
+            pattern, with datetime formatting and regex support.")
+    argparser.add_argument('directory')
+    argparser.add_argument('search_pattern')
+    argparser.add_argument('replacement_pattern')
+    return argparser.parse_args(args)
+
 def main(args):
-    # Handle startup errors
-    if (len(args) != 4):
-        print("Usage: rebrn directory search_pattern replacement_pattern") #TODO: use argparse
-        exit(1)
-    
-    directory = args[1]
-    search_format = args[2]
-    replacement_format = args[3]
+    # Parse arguments
+    args = parse_args(args)
 
-    path = Path(directory)
+    # Get path to directory
+    path_to_directory = Path(args.directory)
 
-    # Handle path errors
-
-    if path.is_file():
+    # Handle directory path errors
+    if path_to_directory.is_file():
         print("File input is still unsupported")
         exit(2)
-
-    if not path.is_dir():
+    if not path_to_directory.is_dir():
         print("Invalid directory or file")
         exit(3)
 
     # Get list of files in directory
-    pre_rename_files = list(filter(lambda f: (Path(directory) / f).is_file(),
-                        os.listdir(str(path))))
+    pre_rename_files = list(filter(lambda f: (path_to_directory / f).is_file(),
+                        os.listdir(str(path_to_directory))))
 
+    # Create a DatetimeMatcher to match regex with datetime formatting
     dtmatcher = DatetimeMatcher()
 
     # Generate new file names
     final_pre_rename_files = []
     final_post_rename_files = []
     for pre_rename_file in pre_rename_files:
-        post_rename_file = dtmatcher.sub(search_format, replacement_format, pre_rename_file)
-        if pre_rename_file != post_rename_file: 
+        post_rename_file = dtmatcher.sub(args.search_pattern, args.replacement_pattern, pre_rename_file)
+        if pre_rename_file != post_rename_file:
             final_pre_rename_files.append(pre_rename_file)
             final_post_rename_files.append(post_rename_file)
-    
+
     # Get final length of files
     num_final_files = len(final_pre_rename_files)
-            
+
     # Generate mapping
     files_oldtonew = dict((final_pre_rename_files[i], final_post_rename_files[i]) for i in range(num_final_files))
 
     # Make display table
     table_data = [final_pre_rename_files, ['-->' for i in range(num_final_files)], final_post_rename_files]
 
-    # Display all files and pending rename results
+    # Early exit if no files to be renamed
     if num_final_files == 0:
         print("No renames to be done!")
         print("Exiting...")
         exit()
-    
+
+    # Display all files and pending rename results
     print("Pending renames to be done: ")
     printTable(table_data)
 
@@ -221,29 +227,18 @@ def main(args):
             exit()
         if confirm == "y":
             is_input_invalid = False
-    
+
     # Do renaming operation
     print("Processing rename...")
     for filename in final_pre_rename_files:
         try:
-            os.rename(str(Path(directory) / filename), str(Path(directory) / files_oldtonew[filename]))
+            os.rename(str(path_to_directory / filename), str(path_to_directory / files_oldtonew[filename]))
         except:
             print("An error occurred when trying to rename {}".format(filename))
 
     print("Rename done.")
     print("Exiting...")
     exit()
-        
+
 if __name__ == '__main__':
     main(sys.argv)
-
-
-
-
-
-
-
-
-
-            
-            
