@@ -1,9 +1,9 @@
 #!/home/stephen/miniconda3/bin/python
 ###############################################################################
 # Author: Stephen Zhao
-# App: dfregex_bulk_rename (rebrn)
-# Version: v0.1
-# Last modified: 2019-12-21
+# App: rebrn
+# Version: v0.1.1
+# Last modified: 2020-10-11
 # Description: Renames files by substituting a search pattern with a
 #      replacement pattern, with datetime formatting and regex support.
 
