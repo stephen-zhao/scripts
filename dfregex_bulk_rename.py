@@ -8,133 +8,17 @@
 #      replacement pattern, with datetime formatting and regex support.
 
 import argparse
-from datetime import date, time, datetime
+from datetime_matcher import DatetimeMatcher
 import os
 from pathlib import Path
-import re
 import sys
-from typing import *
+from typing import List
 
 IS_DEBUG = True
 
 def debug(*args):
     if IS_DEBUG:
         print('[DEBUG]', *args)
-
-#TODO: extract into its own package and ship!
-class DatetimeMatcher:
-
-    weekdays_abbr = [date(2019,12,22+i).strftime('%a') for i in range(7)]
-    weekdays = [date(2019,12,22+i).strftime('%A') for i in range(7)]
-    months_abbr = [date(2019,i,1).strftime('%b') for i in range(1, 13)]
-    months = [date(2019,i,1).strftime('%B') for i in range(1, 13)]
-    am_pm = [time(10).strftime('%p'), time(20).strftime('%p')]
-
-    format_code_to_re = {
-        r'%a': '({})'.format('|'.join(weekdays_abbr)),
-        r'%A': '({})'.format('|'.join(weekdays)),
-        r'%w': r'([0-6])',
-        r'%d': r'(0[1-9]|[12][0-9]|3[01])',
-        r'%b': '({})'.format('|'.join(months_abbr)),
-        r'%B': '({})'.format('|'.join(months)),
-        r'%m': r'(0[1-9]|1[0-2])',
-        r'%y': r'([0-9]{2})',
-        r'%Y': r'([0-9]{4})',
-        r'%H': r'([01][0-9]|2[0-3])',
-        r'%I': r'(0[1-9]|1[0-2])',
-        r'%p': '({})'.format('|'.join(am_pm)),
-        r'%M': r'([0-5][0-9])',
-        r'%S': r'([0-5][0-9])',
-        r'%f': r'([0-9]{6})'
-        #TODO: finish adding all datetime formats
-    }
-
-    def supported_format_codes(self) -> List[str]:
-        return self.__class__.format_code_to_re.keys()
-
-    def get_regex_from_format_code(self, format_code) -> List[str]:
-        return self.__class__.format_code_to_re[format_code]
-
-    # Generates regexes for format codes, otherwise just spits out the character
-    def _get_regex_parts(self, dfregex: str) -> Generator[str, None, None]:
-        i = 0
-        while i < len(dfregex):
-            # If past the point at which a legal format code can exist,
-            # just yield the existing character and go to the next.
-            if i >= len(dfregex) - 1:
-                yield dfregex[i]
-                i += 1
-            # Otherwise, check for a potential format code
-            else:
-                potential_format_code = dfregex[i:i+2]
-                # If the characters at this i form a supported format code,
-                # then yield the regex for that format code
-                # and skip the next character.
-                if potential_format_code in self.supported_format_codes():
-                    yield self.get_regex_from_format_code(potential_format_code)
-                    i += 2
-                # Otherwise, just yield the existing character
-                # and go to the next.
-                else:
-                    yield dfregex[i]
-                    i += 1
-
-    # Extracts the regex string from the datetime format augmented regex
-    def get_regex(self, dfregex: str) -> Tuple[Dict[str, int], str]:
-        return ''.join(self._get_regex_parts(dfregex))
-
-    def get_format_codes_and_group_indices(self, dfregex: str) -> Tuple[List[str], List[int]]:
-        codes = []
-        indices = []
-        index = 1 # start at 1 because index 0 is always the entire match
-        for i in range(len(dfregex) - 1):
-            if dfregex[i] == '(':
-                if i > 0 and dfregex[i-1] == '\'':
-                    continue
-                if i < len(dfregex) - 2 and dfregex[i+1] == '?':
-                    continue
-                index += 1
-            elif dfregex[i:i+2] in self.supported_format_codes():
-                codes.append(dfregex[i:i+2])
-                indices.append(index)
-                index += 1
-            else:
-                pass
-        return (codes, indices)
-
-    def extract_datetime(self, search_dfregex: str, text: str) -> Optional[datetime]:
-        search_regex = self.get_regex(search_dfregex)
-        (codes, indices) = self.get_format_codes_and_group_indices(search_dfregex)
-        match = re.match(search_regex, text)
-        if not match:
-            return None
-        datetime_groups = list(map(lambda x: x[1], filter(lambda x: x[0]+1 in indices, enumerate(match.groups()))))
-        datetime_string = '#'.join(datetime_groups)
-        format_string = '#'.join(codes)
-        try:
-            parsed_datetime = datetime.strptime(datetime_string, format_string)
-        except ValueError:
-            return None
-        return parsed_datetime
-
-    def sub(self, search_dfregex: str, replacement_dfregex: str, text: str) -> str:
-        search_regex = self.get_regex(search_dfregex)
-        (codes, indices) = self.get_format_codes_and_group_indices(search_dfregex)
-        # Substitute the string, regex-wise, leaving datetime formatters in place
-        subbed_text_with_datetime_format = re.sub(search_regex, replacement_dfregex, text)
-        # Get the datetime
-        match = re.match(search_regex, text)
-        if not match:
-            return text
-        datetime_groups = list(map(lambda x: x[1], filter(lambda x: x[0]+1 in indices, enumerate(match.groups()))))
-        datetime_string = '#'.join(datetime_groups)
-        format_string = '#'.join(codes)
-        try:
-            parsed_datetime = datetime.strptime(datetime_string, format_string)
-        except ValueError:
-            return text
-        return parsed_datetime.strftime(subbed_text_with_datetime_format)
-
 
 # Prints a neat table
 # shamelessly copied, courtesy of u/ParalysedBeaver, from:
